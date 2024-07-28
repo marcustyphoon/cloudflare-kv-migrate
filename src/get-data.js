@@ -90,33 +90,42 @@ const apiFetchRaw = async (url) => {
 
   const allData = [[]];
 
-  for (const [i, { name: keyName }] of Object.entries(keys.slice(0, TEST_STOP_EARLY))) {
-    const [metadataResponse, valueResponse] = await Promise.all([
-      apiFetch(`/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/metadata/${keyName}`),
-      apiFetchRaw(`/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/values/${keyName}`),
-    ]);
-    const metadata = metadataResponse.result;
+  const failures = [];
 
-    // this endpoint has no wrapper? ok sure
-    const value = await valueResponse.arrayBuffer();
+  for (const [i, entry] of Object.entries(keys.slice(0, TEST_STOP_EARLY))) {
+    const { name: keyName } = entry;
 
-    const dataValue = {
-      key: keyName,
-      base64: true,
-      value: uint8ArrayToBase64(new Uint8Array(value)),
-    };
-    if (metadata) {
-      dataValue.metadata = metadata;
-    }
+    try {
+      const [metadataResponse, valueResponse] = await Promise.all([
+        apiFetch(`/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/metadata/${keyName}`),
+        apiFetchRaw(`/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/values/${keyName}`),
+      ]);
+      const metadata = metadataResponse.result;
 
-    const latestData = allData.at(-1);
-    const latestDataKeys = latestData.length;
-    const latestDataLength = JSON.stringify(latestData, null, 2).length;
+      // this endpoint has no wrapper? ok sure
+      const value = await valueResponse.arrayBuffer();
 
-    if (latestDataKeys < MAX_UPLOAD_KEYS && latestDataLength < MAX_UPLOAD_REQUEST_SIZE) {
-      latestData.push(dataValue);
-    } else {
-      allData.push([dataValue]);
+      const dataValue = {
+        key: keyName,
+        base64: true,
+        value: uint8ArrayToBase64(new Uint8Array(value)),
+      };
+      if (metadata) {
+        dataValue.metadata = metadata;
+      }
+
+      const latestData = allData.at(-1);
+      const latestDataKeys = latestData.length;
+      const latestDataLength = JSON.stringify(latestData, null, 2).length;
+
+      if (latestDataKeys < MAX_UPLOAD_KEYS && latestDataLength < MAX_UPLOAD_REQUEST_SIZE) {
+        latestData.push(dataValue);
+      } else {
+        allData.push([dataValue]);
+      }
+    } catch (e) {
+      console.log(`failure on key ${keyName}`);
+      failures.push(entry);
     }
 
     if (i % 5 === 0) {
@@ -133,6 +142,13 @@ const apiFetchRaw = async (url) => {
 
   for (const [i, data] of Object.entries(allData)) {
     await fs.writeFile(`${dir}/data${i}.json`, JSON.stringify(data, null, 2), {
+      encoding: 'utf8',
+      flag: 'w+',
+    });
+  }
+
+  if (failures.length) {
+    await fs.writeFile(`${dir}/failures.json`, JSON.stringify(failures, null, 2), {
       encoding: 'utf8',
       flag: 'w+',
     });
