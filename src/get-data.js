@@ -7,7 +7,7 @@ const MAX_UPLOAD_KEYS = 10_000; // set 1000 for workers free tier limit
 
 const TEST_STOP_EARLY = Infinity;
 
-const apiFetch = async (url) => {
+const apiFetchInternal = async (url) => {
   const result = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${process.env.GET_ACCOUNT_ID}${url}`,
     {
@@ -21,7 +21,16 @@ const apiFetch = async (url) => {
   return result;
 };
 
-const apiFetchRaw = async (url) => {
+const apiFetch = async (url) => {
+  try {
+    return await apiFetchInternal(url);
+  } catch (e) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return await apiFetchInternal(url);
+  }
+};
+
+const apiFetchRawInternal = async (url) => {
   return fetch(
     `https://api.cloudflare.com/client/v4/accounts/${process.env.GET_ACCOUNT_ID}${url}`,
     {
@@ -30,6 +39,15 @@ const apiFetchRaw = async (url) => {
       },
     },
   );
+};
+
+const apiFetchRaw = async (url) => {
+  try {
+    return await apiFetchRawInternal(url);
+  } catch (e) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return await apiFetchRawInternal(url);
+  }
 };
 
 (async () => {
@@ -103,6 +121,13 @@ const apiFetchRaw = async (url) => {
 
     if (i % 5 === 0) {
       console.log(`downloaded ${i} values`);
+
+      for (const [i, data] of Object.entries(allData)) {
+        await fs.writeFile(`${dir}/data${i}.json`, JSON.stringify(data, null, 2), {
+          encoding: 'utf8',
+          flag: 'w+',
+        });
+      }
     }
   }
 
