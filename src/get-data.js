@@ -7,16 +7,34 @@ import fs from 'fs/promises';
   const dir = `data-get/${timestamp}`;
   await fs.mkdir(dir);
 
-  const keysResponse = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${process.env.GET_ACCOUNT_ID}/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/keys`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.GET_BEARER}`,
-      },
-    },
-  ).then((result) => result.json());
+  const keys = [];
+  let cursor;
 
-  await fs.writeFile(`${dir}/keys-response.json`, JSON.stringify(keysResponse, null, 2), {
+  do {
+    const queryParams = cursor ? `?cursor=${cursor}` : '';
+    const keysResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${process.env.GET_ACCOUNT_ID}/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/keys${queryParams}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.GET_BEARER}`,
+        },
+      },
+    ).then((result) => result.json());
+
+    const {
+      success,
+      result,
+      errors,
+      result_info: { count, cursor: newCursor },
+    } = keysResponse;
+    if (!success) throw new Error(errors);
+    console.log(`fetched ${count} keys`);
+
+    keys.push(...result);
+    cursor = newCursor;
+  } while (cursor);
+
+  await fs.writeFile(`${dir}/keys.json`, JSON.stringify(keys, null, 2), {
     encoding: 'utf8',
     flag: 'w+',
   });
