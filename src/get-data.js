@@ -73,15 +73,13 @@ const apiFetchRaw = async (url) => {
   const allData = [[]];
 
   for (const [i, { name: keyName }] of Object.entries(keys.slice(0, TEST_STOP_EARLY))) {
-    const metadataResponse = await apiFetch(
-      `/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/metadata/${keyName}`,
-    );
+    const [metadataResponse, valueResponse] = await Promise.all([
+      apiFetch(`/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/metadata/${keyName}`),
+      apiFetchRaw(`/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/values/${keyName}`),
+    ]);
     const metadata = metadataResponse.result;
 
     // this endpoint has no wrapper? ok sure
-    const valueResponse = await apiFetchRaw(
-      `/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/values/${keyName}`,
-    );
     const value = await valueResponse.arrayBuffer();
 
     const dataValue = {
