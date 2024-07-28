@@ -5,7 +5,8 @@ import { uint8ArrayToBase64 } from 'uint8array-extras';
 const MAX_UPLOAD_REQUEST_SIZE = 1_000_000 * 100 * 0.8; // 100mb minus a bit
 const MAX_UPLOAD_KEYS = 10_000; // set 1000 for workers free tier limit
 
-const TEST_STOP_EARLY = Infinity;
+const TEST_STOP_EARLY = Infinity; // saves only this many keys
+const TEST_RESUME_AFTER = ''; // skips keys up to and including this
 
 const apiFetchInternal = async (url) => {
   const result = await fetch(
@@ -60,7 +61,7 @@ const apiFetchRaw = async (url) => {
    * fetch keys
    */
 
-  const keys = [];
+  let keys = [];
   let cursor;
 
   do {
@@ -83,6 +84,13 @@ const apiFetchRaw = async (url) => {
     encoding: 'utf8',
     flag: 'w+',
   });
+
+  if (TEST_RESUME_AFTER) {
+    const index = keys.findIndex(({ name }) => name === TEST_RESUME_AFTER);
+    if (index === -1) throw new Error(`could not find key ${TEST_RESUME_AFTER} to resume after`);
+
+    keys = keys.slice(index + 1);
+  }
 
   /**
    * fetch values and metadata
