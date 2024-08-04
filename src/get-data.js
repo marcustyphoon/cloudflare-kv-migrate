@@ -8,6 +8,8 @@ const MAX_UPLOAD_KEYS = 10_000; // set 1000 for workers free tier limit
 const TEST_STOP_EARLY = Infinity; // saves only this many keys
 const TEST_RESUME_AFTER = ''; // skips keys up to and including this
 
+const PARALLEL_FETCHES = 10;
+
 const apiFetchInternal = async (url) => {
   const result = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${process.env.GET_ACCOUNT_ID}${url}`,
@@ -51,6 +53,16 @@ const apiFetchRaw = async (url) => {
   }
 };
 
+function* batchCallAsync(inputValues, cb, batchSize) {
+  const values = [...inputValues];
+  while (values.length) {
+    const resultBatch = values.splice(0, batchSize).map(cb);
+    for (const result of resultBatch) {
+      yield result;
+    }
+  }
+}
+
 (async () => {
   await fs.mkdir('data-get').catch(() => {});
   const timestamp = Math.round(Date.now() / 1000);
@@ -60,6 +72,8 @@ const apiFetchRaw = async (url) => {
   /**
    * fetch keys
    */
+
+  console.time('fetching keys');
 
   let keys = [];
   let cursor;
@@ -92,9 +106,13 @@ const apiFetchRaw = async (url) => {
     keys = keys.slice(index + 1);
   }
 
+  console.timeEnd('fetching keys');
+
   /**
    * fetch values and metadata
    */
+
+  console.time('fetching values');
 
   const allData = [[]];
 
@@ -103,16 +121,23 @@ const apiFetchRaw = async (url) => {
   const keysToFetch = keys.slice(0, TEST_STOP_EARLY);
   let i = 0;
 
-  for (const entry of keysToFetch) {
-    i++;
+  const doFetch = (entry) => {
+    const { name: keyName } = entry;
+    return {
+      entry,
+      responses: Promise.all([
+        apiFetch(`/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/metadata/${keyName}`),
+        apiFetchRaw(`/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/values/${keyName}`),
+      ]),
+    };
+  };
 
+  for (const { entry, responses } of batchCallAsync(keysToFetch, doFetch, PARALLEL_FETCHES / 2)) {
+    i++;
     const { name: keyName } = entry;
 
     try {
-      const [metadataResponse, valueResponse] = await Promise.all([
-        apiFetch(`/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/metadata/${keyName}`),
-        apiFetchRaw(`/storage/kv/namespaces/${process.env.GET_KV_NAMESPACE_ID}/values/${keyName}`),
-      ]);
+      const [metadataResponse, valueResponse] = await responses;
       const metadata = metadataResponse.result;
 
       // this endpoint has no wrapper? ok sure
@@ -174,5 +199,5 @@ const apiFetchRaw = async (url) => {
     });
   }
 
-  console.log('saved all values!');
+  console.timeEnd('fetching values');
 })();
