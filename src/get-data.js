@@ -100,7 +100,12 @@ const apiFetchRaw = async (url) => {
 
   const failures = [];
 
-  for (const [i, entry] of Object.entries(keys.slice(0, TEST_STOP_EARLY))) {
+  const keysToFetch = keys.slice(0, TEST_STOP_EARLY);
+  let i = 0;
+
+  for (const entry of keysToFetch) {
+    i++;
+
     const { name: keyName } = entry;
 
     try {
