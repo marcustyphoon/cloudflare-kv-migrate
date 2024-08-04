@@ -146,6 +146,13 @@ const apiFetchRaw = async (url) => {
         });
       }
     }
+
+    if (failures.length) {
+      await fs.writeFile(`${dir}/failures.json`, JSON.stringify(failures, null, 2), {
+        encoding: 'utf8',
+        flag: 'w+',
+      });
+    }
   }
 
   for (const [i, data] of Object.entries(allData)) {
