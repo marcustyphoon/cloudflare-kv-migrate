@@ -11,7 +11,7 @@ At two request roundtrips per key, this is fairly inefficient.
 - Make a bearer token with read permissions for the source Workers KV at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) and fill in source account info.
 - Run `pnpm get-data`. Wait a billion years.
 
-JSON file(s) will be created in `data-get/<current timestamp>` that should be compatible with the `wrangler kv bulk put`/`wrangler kv:bulk put` upload command to migrate/restore. See [cloudflare documentation](https://developers.cloudflare.com/workers/wrangler/commands/#put-1).
+JSON file(s) will be created in `data-get/<current timestamp>` that should be compatible with the `wrangler kv bulk put`/`wrangler kv:bulk put` upload command to migrate/restore. See [cloudflare documentation](https://developers.cloudflare.com/workers/wrangler/commands/#kv-bulk-put).
 
 ### Limitations
 
