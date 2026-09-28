@@ -2,22 +2,17 @@
   "type": "module",
   "scripts": {
     "get-data": "node src/get-data.js",
-    "test": "pnpm eslint && pnpm prettier",
+    "test": "npm run eslint && npm run prettier",
     "eslint": "eslint src",
     "prettier": "prettier src --check"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
-    "uint8array-extras": "^1.5.0"
+    "uint8array-extras": "^1.6.0"
   },
   "devDependencies": {
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.9.6"
-  },
-  "engines": {
-    "npm": "please-use-pnpm",
-    "yarn": "please-use-pnpm"
-  },
-  "packageManager": "pnpm@10.34.5+sha512.a4ee05f2f73658255bd6a89859c065a45c28a57daefae2c893a168ee2b73168c37b91e83e57ea67654ad03f03031746430e8bce38e362e042605fb8abc80192e"
+    "prettier": "^3.9.9"
+  }
 }
